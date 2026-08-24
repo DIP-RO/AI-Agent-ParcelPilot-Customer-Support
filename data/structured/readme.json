@@ -1,0 +1,18 @@
+[
+  {
+    "ParcelPilot AI Agent Assessment - Structured Data": "Dataset snapshot",
+    "col1": "2026-08-16 11:00 Asia/Kolkata"
+  },
+  {
+    "ParcelPilot AI Agent Assessment - Structured Data": "Currency",
+    "col1": "INR"
+  },
+  {
+    "ParcelPilot AI Agent Assessment - Structured Data": "Notes",
+    "col1": "This is a synthetic dataset created for a hiring assessment."
+  },
+  {
+    "ParcelPilot AI Agent Assessment - Structured Data": "Important",
+    "col1": "Some historical ticket resolutions may be incorrect. Treat them as historical context, not policy authority."
+  }
+]

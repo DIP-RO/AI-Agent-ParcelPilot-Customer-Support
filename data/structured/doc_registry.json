@@ -1,0 +1,78 @@
+[
+  {
+    "doc_id": "support-policy-v3",
+    "file": "01_Support_Policy_v3_CURRENT.txt",
+    "source_pdf": "01_Support_Policy_v3_CURRENT.pdf",
+    "title": "ParcelPilot Support Policy v3",
+    "doc_type": "policy",
+    "status": "current",
+    "authority_tier": 2,
+    "authority_label": "Current support policy (overridden by signed customer agreements)",
+    "effective_from": "2026-05-01",
+    "account_id": null,
+    "supersedes": "support-policy-v2"
+  },
+  {
+    "doc_id": "support-policy-v2",
+    "file": "02_Support_Policy_v2_DEPRECATED.txt",
+    "source_pdf": "02_Support_Policy_v2_DEPRECATED.pdf",
+    "title": "ParcelPilot Support Policy v2 (DEPRECATED)",
+    "doc_type": "policy",
+    "status": "deprecated",
+    "authority_tier": 9,
+    "authority_label": "DEPRECATED - historical reference only, never use for current requests",
+    "effective_from": "2025-01-01",
+    "superseded_by": "support-policy-v3",
+    "account_id": null
+  },
+  {
+    "doc_id": "cancellation-sop-v4",
+    "file": "03_Cancellation_and_Service_Credit_SOP_v4.txt",
+    "source_pdf": "03_Cancellation_and_Service_Credit_SOP_v4.pdf",
+    "title": "ParcelPilot Cancellation & Service Credit SOP v4",
+    "doc_type": "sop",
+    "status": "current",
+    "authority_tier": 2,
+    "authority_label": "Current SOP (overridden by signed customer agreements)",
+    "effective_from": "2026-06-15",
+    "account_id": null
+  },
+  {
+    "doc_id": "product-ops-guide",
+    "file": "04_Product_Operations_Guide_and_Known_Issues.txt",
+    "source_pdf": "04_Product_Operations_Guide_and_Known_Issues.pdf",
+    "title": "ParcelPilot Product Operations Guide & Known Issues",
+    "doc_type": "product_doc",
+    "status": "current",
+    "authority_tier": 3,
+    "authority_label": "Current product documentation",
+    "effective_from": "2026-08-14",
+    "account_id": null
+  },
+  {
+    "doc_id": "northstar-agreement",
+    "file": "05_Northstar_Logistics_Enterprise_Agreement.txt",
+    "source_pdf": "05_Northstar_Logistics_Enterprise_Agreement.pdf",
+    "title": "Northstar Logistics Enterprise Agreement",
+    "doc_type": "agreement",
+    "status": "current",
+    "authority_tier": 1,
+    "authority_label": "Signed customer agreement (highest authority for this account)",
+    "effective_from": "2026-01-01",
+    "effective_to": "2026-12-31",
+    "account_id": "ACCT-001"
+  },
+  {
+    "doc_id": "lumenworks-agreement",
+    "file": "06_LumenWorks_Service_Agreement.txt",
+    "source_pdf": "06_LumenWorks_Service_Agreement.pdf",
+    "title": "LumenWorks Service Agreement",
+    "doc_type": "agreement",
+    "status": "current",
+    "authority_tier": 1,
+    "authority_label": "Signed customer agreement (highest authority for this account)",
+    "effective_from": "2026-03-01",
+    "effective_to": "2027-02-28",
+    "account_id": "ACCT-002"
+  }
+]

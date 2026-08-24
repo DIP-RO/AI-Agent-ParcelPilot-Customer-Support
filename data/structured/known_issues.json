@@ -1,0 +1,39 @@
+[
+  {
+    "issue_id": "KI-208",
+    "title": "Bulk Upload failures on large CSVs",
+    "status": "investigating",
+    "opened": "2026-08-10",
+    "source_doc": "product-ops-guide",
+    "source_clause": "Product Operations Guide §2 (Current known issues)",
+    "affected_plans": ["Growth", "Enterprise"],
+    "feature": "bulk_upload",
+    "detail": "Intermittent failures on CSV uploads above approximately 3,000 rows, even though the supported product limit remains 5,000 rows. Individual shipment creation is unaffected.",
+    "workaround": "Split the upload into files below 3,000 rows.",
+    "match_keywords": ["bulk", "upload", "csv", "rows", "spreadsheet", "import"]
+  },
+  {
+    "issue_id": "KI-211",
+    "title": "SwiftShip pickup webhook delay",
+    "status": "monitoring",
+    "opened": "2026-08-12",
+    "source_doc": "product-ops-guide",
+    "source_clause": "Product Operations Guide §2 (Current known issues)",
+    "carrier": "SwiftShip",
+    "delay_minutes": 20,
+    "detail": "SwiftShip pickup confirmation webhooks can arrive up to 20 minutes late. A parcel may physically be collected while ParcelPilot still shows BOOKED.",
+    "guidance": "Before telling a customer that a pickup did not occur, verify the carrier status or wait through the known delay window.",
+    "match_keywords": ["swiftship", "pickup", "booked", "webhook", "status", "driver", "collected"]
+  },
+  {
+    "issue_id": "KI-176",
+    "title": "Address validation",
+    "status": "resolved",
+    "resolved": "2026-07-18",
+    "source_doc": "product-ops-guide",
+    "source_clause": "Product Operations Guide §3 (Resolved issue)",
+    "detail": "Resolved 18 July 2026.",
+    "caution": "Do not use this resolved issue to explain new incidents unless evidence specifically matches it.",
+    "match_keywords": ["address", "validation"]
+  }
+]

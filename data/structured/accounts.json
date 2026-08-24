@@ -1,0 +1,42 @@
+[
+  {
+    "account_id": "ACCT-001",
+    "account_name": "Northstar Logistics",
+    "plan": "Enterprise",
+    "status": "active",
+    "csm": "Priya Mehta",
+    "contract_file": "05_Northstar_Logistics_Enterprise_Agreement.pdf",
+    "premium_support": true,
+    "notes": "Strategic account. Contract contains custom SLA and cancellation terms."
+  },
+  {
+    "account_id": "ACCT-002",
+    "account_name": "LumenWorks",
+    "plan": "Growth",
+    "status": "active",
+    "csm": "Arjun Rao",
+    "contract_file": "06_LumenWorks_Service_Agreement.pdf",
+    "premium_support": false,
+    "notes": "Growth customer with contract-specific service credit terms."
+  },
+  {
+    "account_id": "ACCT-003",
+    "account_name": "Beacon Retail",
+    "plan": "Standard",
+    "status": "active",
+    "csm": "Neha Kapoor",
+    "contract_file": null,
+    "premium_support": false,
+    "notes": "No custom agreement in the supplied pack; standard policies apply."
+  },
+  {
+    "account_id": "ACCT-004",
+    "account_name": "Axis Labs",
+    "plan": "Enterprise",
+    "status": "active",
+    "csm": "Priya Mehta",
+    "contract_file": null,
+    "premium_support": false,
+    "notes": "Enterprise plan; standard Enterprise support policy applies."
+  }
+]

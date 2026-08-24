@@ -1,0 +1,67 @@
+{
+  "_comment": "Default (non-contract) terms compiled from the CURRENT policy documents. Each entry cites its source so answers can quote the clause. A signed customer agreement (contract_terms.json) overrides these per source-precedence rules in Support Policy v3 §1.",
+  "sla": {
+    "source_doc": "support-policy-v3",
+    "source_clause": "Support Policy v3 §3 (Default first-response targets)",
+    "plans": {
+      "Enterprise": {
+        "P1": {"amount": 30, "unit": "minutes", "coverage": "24x7"},
+        "P2": {"amount": 2, "unit": "hours", "coverage": "24x7"},
+        "P3": {"amount": 1, "unit": "business_days"}
+      },
+      "Growth": {
+        "P1": {"amount": 2, "unit": "business_hours"},
+        "P2": {"amount": 4, "unit": "business_hours"},
+        "P3": {"amount": 2, "unit": "business_days"}
+      },
+      "Standard": {
+        "P1": {"amount": 4, "unit": "business_hours"},
+        "P2": {"amount": 1, "unit": "business_days"},
+        "P3": {"amount": 2, "unit": "business_days"}
+      }
+    }
+  },
+  "severity_definitions": {
+    "source_doc": "support-policy-v3",
+    "source_clause": "Support Policy v3 §2 (Severity definitions)",
+    "P1": "Complete production outage preventing all shipment creation for a customer, confirmed security incident or suspected credential exposure, or another event causing immediate material business risk with no workaround.",
+    "P2": "Major feature unavailable or materially degraded for a customer, but core operations remain possible or a workaround exists.",
+    "P3": "Minor defect, how-to question, configuration request, or issue with limited operational impact."
+  },
+  "cancellation": {
+    "source_doc": "cancellation-sop-v4",
+    "source_clause": "Cancellation & Service Credit SOP v4 §1 (Order cancellation)",
+    "draft": {"allowed": true, "fee_inr": 0},
+    "booked": {
+      "allowed": true,
+      "free_within_minutes_of_booking": 30,
+      "late_fee_inr": 250,
+      "fee_waivable_by_agreement": true
+    },
+    "picked_up": {
+      "allowed": false,
+      "alternative": "return-to-origin workflow"
+    },
+    "delivered": {"allowed": false}
+  },
+  "service_credit": {
+    "source_doc": "cancellation-sop-v4",
+    "source_clause": "Cancellation & Service Credit SOP v4 §2 (Failed-pickup service credits)",
+    "delay_threshold_hours": 2,
+    "requires_carrier_fault": true,
+    "requires_no_customer_fault": true,
+    "credit_formula": "lower of INR 500 or 10% of the shipment fee",
+    "credit_cap_inr": 500,
+    "credit_pct_of_fee": 10,
+    "manager_approval_above_inr": 1000,
+    "manager_approval_clause": "Cancellation & Service Credit SOP v4 §3 (Approval and uncertainty)"
+  },
+  "escalation": {
+    "source_doc": "support-policy-v3",
+    "source_clause": "Support Policy v3 §4 (Escalation)",
+    "rules": [
+      "P1 incidents should be escalated immediately.",
+      "If a response target is already breached, clearly state the breach and recommend escalation rather than hiding uncertainty."
+    ]
+  }
+}

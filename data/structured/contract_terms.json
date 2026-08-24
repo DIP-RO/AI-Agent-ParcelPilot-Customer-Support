@@ -1,0 +1,39 @@
+{
+  "_comment": "Structured entitlements compiled from each signed customer agreement in the data pack (see scripts/compile_contracts.py, which regenerates this file with an LLM pass over the agreement text; it is checked in so the app runs deterministically). Fields present here OVERRIDE policy_defaults.json for that account, per Support Policy v3 §1 source precedence. Fields absent fall through to the defaults.",
+  "ACCT-001": {
+    "source_doc": "northstar-agreement",
+    "sla": {
+      "source_clause": "Northstar Enterprise Agreement §1 (Support terms) - replaces standard support-policy targets",
+      "P1": {"amount": 15, "unit": "minutes", "coverage": "24x7"},
+      "P2": {"amount": 1, "unit": "hours", "coverage": "24x7"},
+      "P3": {"amount": 8, "unit": "business_hours"}
+    },
+    "cancellation": {
+      "source_clause": "Northstar Enterprise Agreement §2 (Shipment cancellation)",
+      "booked_fee_waived": true,
+      "notes": "Northstar may cancel any BOOKED shipment before pickup with no cancellation fee, regardless of how long ago it was booked. Once PICKED_UP, the standard return-to-origin process applies."
+    },
+    "service_credit": {
+      "source_clause": "Northstar Enterprise Agreement §3 (Service credits)",
+      "monthly_aggregate_cap_inr": 5000,
+      "notes": "Unless the agreement states otherwise, the current ParcelPilot service-credit SOP applies. Monthly aggregate credits are capped at INR 5,000."
+    }
+  },
+  "ACCT-002": {
+    "source_doc": "lumenworks-agreement",
+    "sla": {
+      "source_clause": "LumenWorks Service Agreement §1 (Support terms)",
+      "P1": {"amount": 2, "unit": "business_hours"},
+      "P2": {"amount": 4, "unit": "business_hours"},
+      "P3": {"amount": 2, "unit": "business_days"},
+      "coverage_notes": "No weekend or after-hours support coverage."
+    },
+    "service_credit": {
+      "source_clause": "LumenWorks Service Agreement §3 (Failed-pickup credits) - replaces the default credit amount and timing threshold in the SOP",
+      "delay_threshold_hours": 4,
+      "fixed_amount_inr": 300,
+      "requires_carrier_fault": true,
+      "requires_no_customer_fault": true
+    }
+  }
+}

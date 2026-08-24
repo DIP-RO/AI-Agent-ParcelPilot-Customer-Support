@@ -1,0 +1,80 @@
+[
+  {
+    "persona_id": "northstar-meera",
+    "display_name": "Meera Nair",
+    "org": "Northstar Logistics",
+    "kind": "customer",
+    "account_id": "ACCT-001",
+    "blurb": "Logistics manager at Northstar (Enterprise, custom agreement). Sees only ACCT-001 data.",
+    "suggested_prompts": [
+      "Can we cancel ORD-1001 without a cancellation fee? Explain why.",
+      "The driver already collected our SwiftShip parcel but it still shows BOOKED. What's going on?",
+      "How fast should ParcelPilot respond to our critical tickets?"
+    ]
+  },
+  {
+    "persona_id": "lumenworks-vikram",
+    "display_name": "Vikram Shah",
+    "org": "LumenWorks",
+    "kind": "customer",
+    "account_id": "ACCT-002",
+    "blurb": "Ops lead at LumenWorks (Growth, contract-specific credit terms). Sees only ACCT-002 data.",
+    "suggested_prompts": [
+      "The pickup for ORD-2002 never happened and it's hours late. Do we get a service credit?",
+      "Why does our 4,200-row CSV bulk upload keep failing? Last time support said our plan only allows 3,000 rows.",
+      "Can we still cancel ORD-2001 for free?"
+    ]
+  },
+  {
+    "persona_id": "beacon-sara",
+    "display_name": "Sara Thomas",
+    "org": "Beacon Retail",
+    "kind": "customer",
+    "account_id": "ACCT-003",
+    "blurb": "Owner at Beacon Retail (Standard plan, no custom agreement). Sees only ACCT-003 data.",
+    "suggested_prompts": [
+      "I asked to cancel ORD-3001 fifteen minutes after booking it. Is there a fee?",
+      "Does our plan include Bulk Upload?",
+      "How do we change the billing contact on our account?"
+    ]
+  },
+  {
+    "persona_id": "axis-dev",
+    "display_name": "Dev Menon",
+    "org": "Axis Labs",
+    "kind": "customer",
+    "account_id": "ACCT-004",
+    "blurb": "Developer at Axis Labs (Enterprise plan, standard terms). Sees only ACCT-004 data.",
+    "suggested_prompts": [
+      "One of our API keys was posted in a public channel. What should we do right now?",
+      "Can we cancel ORD-4001?"
+    ]
+  },
+  {
+    "persona_id": "support-rohit",
+    "display_name": "Rohit Sharma",
+    "org": "ParcelPilot",
+    "kind": "staff",
+    "role": "support_agent",
+    "blurb": "Support agent. Full read access across accounts, can escalate, update tickets, and create tasks. Credits above INR 1,000 need an ops manager.",
+    "suggested_prompts": [
+      "What needs attention right now?",
+      "Is TKT-501 breaching its SLA? What should we do?",
+      "TKT-502 looks like a repeat of an older bulk upload ticket - is our previous answer still right?",
+      "Can Northstar cancel ORD-1001 without a cancellation fee? Explain why."
+    ]
+  },
+  {
+    "persona_id": "ops-anita",
+    "display_name": "Anita Desai",
+    "org": "ParcelPilot",
+    "kind": "staff",
+    "role": "ops_manager",
+    "blurb": "Operations manager. Everything a support agent can do, plus approving service credits above INR 1,000.",
+    "suggested_prompts": [
+      "Which open tickets are P1s and where do we stand on their SLAs?",
+      "Are multiple customers affected by the same product issue right now?",
+      "Apply the service credit LumenWorks is owed for ORD-2002."
+    ]
+  }
+]
