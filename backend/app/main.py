@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import actions, agent, auth, config, datastore, insights
+from . import actions, agent, auth, config, datastore, insights, slm
 from .auth import AuthError, Principal
 
 app = FastAPI(title="ParcelPilot Support Copilot")
@@ -42,7 +42,11 @@ class LoginRequest(BaseModel):
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"ok": True, "model": config.MODEL, "snapshot": str(datastore.snapshot_now())}
+    mode = "claude" if config.HAS_ANTHROPIC_KEY else "local_slm_fallback"
+    body = {"ok": True, "model": config.MODEL, "mode": mode, "snapshot": str(datastore.snapshot_now())}
+    if mode == "local_slm_fallback":
+        body["slm_loaded"] = slm.available()
+    return body
 
 
 @app.get("/api/personas")

@@ -13,17 +13,19 @@ Built for the CalQuity AI Engineer assessment. See [docs/ARCHITECTURE.md](docs/A
 - **Access control in the data/tool layer**, not the prompt: HMAC-signed persona tokens; customers physically cannot retrieve other accounts' rows or agreements (the model never sees them).
 - **Structural confirmation for actions**: agent tools only *prepare* a signed pending action; execution happens on a separate endpoint wired to the UI's Confirm button. The model cannot execute anything by itself.
 - **Source-reliability handling**: authority-tiered retrieval (agreement > policy/SOP > product docs), deprecated-policy quarantine, "may be incorrect" annotations on historical ticket resolutions, and stale-status caveats driven by live known issues (KI-211).
-- **69 backend tests** covering every order/ticket in the pack, the designed traps, access control (including path-traversal and id-enumeration hardening), and the confirmation flow.
+- **Local SLM fallback with no API key**: if `ANTHROPIC_API_KEY` is unset (e.g. a free-tier deploy with no API budget, or a live outage), the app automatically serves a narrower agent backed by a small on-device model (~135M params, `llama-cpp-python`) instead of just erroring — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#local-fallback-mode-no-api-key).
+- **94 backend tests** covering every order/ticket in the pack, the designed traps, access control (including path-traversal and id-enumeration hardening), the confirmation flow, and the no-API-key fallback router.
 
 ## Run locally
 
-Prereqs: Python 3.11+, Node 18+, an Anthropic API key.
+Prereqs: Python 3.11+, Node 18+. An Anthropic API key is **optional** — without
+one the chat runs on the local SLM fallback instead (see below).
 
 ```bash
 # 1. Backend
 python3 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt
-export ANTHROPIC_API_KEY=sk-ant-...
+export ANTHROPIC_API_KEY=sk-ant-...   # omit this to run the free local-SLM fallback instead
 .venv/bin/python -m uvicorn app.main:app --app-dir backend --port 8000
 
 # 2. Frontend (second terminal)
@@ -40,9 +42,41 @@ Or a single service: `cd frontend && npm run build`, then the FastAPI server als
 .venv/bin/python -m pytest backend/tests   # no API key needed
 ```
 
+## Local SLM fallback (no API key)
+
+If `ANTHROPIC_API_KEY` is unset, `/api/chat` automatically routes to
+`app/fallback_agent.py` — a plain-Python keyword/entity router over the exact
+same access-controlled tools, with a small on-device model (`app/slm.py`,
+~135M params via `llama-cpp-python`) only phrasing the result. See
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#local-fallback-mode-no-api-key)
+for the full design and the latency numbers that shaped it.
+
+```bash
+.venv/bin/pip install --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu llama-cpp-python==0.3.34
+.venv/bin/python scripts/fetch_slm_model.py   # downloads data/models/slm.gguf (~145MB, gitignored)
+```
+
+The Docker image (below) fetches this model automatically at build time.
+
+## Deploy (Render — free tier, includes the SLM fallback)
+
+The repo includes a [render.yaml](render.yaml) Blueprint, so this is close to
+one-click: on [Render](https://render.com), **New +** → **Blueprint** → point
+it at this repo. It provisions a free Docker web service that builds the
+image (frontend + backend + the fallback model), and prompts you for
+`ANTHROPIC_API_KEY` — **leave it blank to run entirely on the free SLM
+fallback, or set it for the full Claude-backed agent.**
+
+Notes for the free instance type (512MB RAM / 0.1 CPU, sleeps after 15 min
+idle): the app fits comfortably (~140MB resident with the fallback model
+loaded), but SLM-fallback replies can take up to a couple of minutes — the
+chat stream sends periodic keepalives so the connection survives the wait,
+and the UI says so up front. This trade-off (and the benchmarks behind it) is
+written up in the architecture note linked above.
+
 ## Deploy (Vercel)
 
-The repo is Vercel-ready: static frontend + Python serverless function ([api/index.py](api/index.py), [vercel.json](vercel.json)).
+The repo is also Vercel-ready: static frontend + Python serverless function ([api/index.py](api/index.py), [vercel.json](vercel.json)). Best suited to the Claude-backed path (serverless cold starts don't suit a resident local model well — see the architecture note).
 
 ```bash
 npm i -g vercel
@@ -59,21 +93,27 @@ Note: the mocked action log / ticket-update overlay is in-memory per serverless 
 docker build -t parcelpilot-copilot .
 docker run -p 8000:8000 -e ANTHROPIC_API_KEY=sk-ant-... parcelpilot-copilot
 # open http://localhost:8000
+# omit -e ANTHROPIC_API_KEY to exercise the local SLM fallback instead
 ```
 
-The multi-stage image builds the React UI and serves it plus the API from one
-container. CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs the
-backend tests, the frontend build, and a Docker image build + `/api/health`
-smoke test on every push and PR.
+The multi-stage image builds the React UI, fetches the SLM fallback model
+(`scripts/fetch_slm_model.py`; skip with `--build-arg SKIP_SLM=1` for a
+smaller/faster image when a key is always present), and serves everything
+from one container. CI ([.github/workflows/ci.yml](.github/workflows/ci.yml))
+runs the backend tests, the frontend build, and a Docker image build +
+`/api/health` smoke test on every push and PR.
 
 ## Configuration
 
 | Env var | Default | Purpose |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | — | required for chat |
+| `ANTHROPIC_API_KEY` | — | if unset, chat runs on the local SLM fallback instead of erroring |
 | `PARCELPILOT_MODEL` | `claude-sonnet-5` | any current Claude model id |
 | `PARCELPILOT_SESSION_SECRET` | demo value | HMAC secret for tokens/pending actions |
 | `PARCELPILOT_MAX_AGENT_TURNS` | `12` | tool-loop budget per message |
+| `PARCELPILOT_SLM_MODEL_PATH` | `data/models/slm.gguf` | GGUF file for the fallback model |
+| `PARCELPILOT_SLM_TIMEOUT_S` | `90` | hard wall-clock ceiling per fallback reply (prefill+decode) |
+| `PARCELPILOT_SLM_MAX_TOKENS` | `64` | max tokens the fallback model generates per reply |
 
 ## Data pipeline
 

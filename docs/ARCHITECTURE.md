@@ -9,6 +9,7 @@
 ┌──────────────▼──────────────── FastAPI ─────────────────────────────────┐
 │  auth.py      HMAC-signed persona tokens → Principal (scope, role)      │
 │  agent.py     manual Claude tool-use loop, streamed as SSE events       │
+│  fallback_agent.py / slm.py  no-API-key path: same tools, router+SLM   │
 │  tools.py     role-filtered registry; every handler takes the Principal │
 │  actions.py   two-phase actions: prepare (signed) → confirm endpoint    │
 │  insights.py  Ops Radar analytics (deterministic, evidence-listing)     │
@@ -39,6 +40,10 @@ after each turn — required for serverless hosting, and it makes replay trivial
 
 Sonnet 5 by default (cost-effective for a support workload); the model is an
 env var, nothing else changes.
+
+If `ANTHROPIC_API_KEY` isn't set, `run_agent_stream` hands the whole turn to a
+different, narrower agent instead of erroring — see "Local fallback mode"
+below.
 
 ## Tool design
 
@@ -128,6 +133,82 @@ prompt hope. Signing keeps this stateless across serverless instances.
   first-response timestamps in the data; Mon–Fri 09:00–18:00 IST business
   hours).
 
+## Local fallback mode (no API key)
+
+Added so the app degrades gracefully instead of just erroring when there's no
+Anthropic budget (e.g. a free-tier deploy) or the API is unreachable:
+`agent.run_agent_stream` checks `config.HAS_ANTHROPIC_KEY` and, if unset,
+delegates the whole turn to `app/fallback_agent.py`, which streams the exact
+same SSE event shapes (`tool_start`/`tool_call`/`tool_result`/`text_delta`/
+`pending_action`/`turn_done`) as the Claude loop — so the frontend needs zero
+changes to render it, tool chips included.
+
+**Split of responsibilities (deliberately the opposite of "a smaller agent
+loop").** A ~135M-parameter model cannot reliably do Claude's job of
+*choosing* tools across a multi-step plan — small models are weak at
+function-calling, and this system's whole premise is not pretending to be
+confident when it isn't. So:
+
+1. A plain-Python keyword/entity router (`fallback_agent._route`) decides
+   which *one* tool to call, from the same `tools.py` registry, dispatched
+   through the same `tools.dispatch` — identical access control, identical
+   rule engines, identical two-phase action confirmation. It resolves order
+   /ticket/account IDs by regex, matches intent keywords (cancellation,
+   credit, SLA, escalation, "what needs attention", etc.), and — mirroring
+   the brief's own hypothetical-credit example — parses delay hours from
+   either digits ("3 hours") or small spelled-out numbers ("three hours").
+   Security-signal phrasing (API key exposure, "breach", "outage", ...)
+   proactively prepares a P1 escalation, same as the full agent is instructed
+   to do, still gated by the normal Confirm step.
+2. The SLM (`app/slm.py`) only *phrases* the tool's already-computed result
+   (rule-trace text, retrieved snippets) into a short reply. It is never
+   handed raw policy text to reinterpret and never chooses actions, so a
+   phrasing mistake can't invent a new policy outcome or an unconfirmed
+   action.
+3. Anything the router doesn't recognise, or that comes back empty from
+   retrieval, prepares an escalation for the user to confirm rather than
+   guessing — the same "don't know → ask a human" posture as the main prompt.
+
+**Latency was the real design constraint, not model choice.** Measured
+directly (see `scripts/fetch_slm_model.py`'s comment for the numbers) on a
+Docker container capped at 512MB RAM / 0.1 CPU — Render's free-tier
+instance type: SmolLM2-360M-Instruct generated at only ~0.16 tokens/sec;
+SmolLM2-135M-Instruct (Q8_0) at ~0.5-0.6 tokens/sec with noticeably more
+coherent output than the same model at Q4_K_M. Less expected: **prefill was
+just as slow as decode** on a CPU this constrained (a ~160-token prompt took
+up to 90 seconds just to process, before generating a single token) — the
+usual assumption that prefill is "cheap" doesn't hold once a container is
+throttled this hard. That finding drove three concrete decisions: swap to the
+smaller 135M model despite lower raw quality, cap the facts handed to the
+prompt tightly (`fallback_agent._MAX_FACTS`/`_MAX_FACT_CHARS`) since prompt
+length now directly buys wall-clock time, and treat "generation" and
+"prefill" as one combined time budget rather than two.
+- **A hard, non-hanging deadline.** `slm.phrase_answer` passes a
+  `stopping_criteria` callback to llama.cpp that checks a wall-clock deadline
+  (`PARCELPILOT_SLM_TIMEOUT_S`, default 90s) after every token — including
+  the first, so a slow prefill alone can trigger it. This stops generation
+  cleanly (not a killed thread) and the result — even an empty completion —
+  degrades to a deterministic bullet-list template of the same underlying
+  facts, so the answer is always present and always correct, just sometimes
+  less fluent than a phrased one. A `threading.Lock.acquire(timeout=...)`
+  around the (single, shared) model instance gives the same bounded-wait
+  guarantee if two requests land at once.
+- **SSE keepalives, not a spinner hoping for the best.** Because a reply can
+  legitimately take over a minute, `fallback_agent._phrase_with_keepalive`
+  runs the blocking call via `asyncio.to_thread` and emits an SSE comment
+  frame (`: keepalive`) every 8 seconds while it waits — verified to hold the
+  connection open past two minutes end-to-end. The existing frontend already
+  ignores non-`data:` SSE lines, so this needed no UI changes; the one UI
+  change made was adding a line to the mode's notice message
+  (`fallback_agent.FALLBACK_NOTICE`) that sets the expectation up front.
+- **Why Render over Vercel for this path.** A resident model that loads once
+  and stays warm needs a persistent process; Vercel's serverless functions
+  would either reload the model on every cold start or need to fit the reload
+  inside the request, both worse than a small always-running container. Local
+  benchmarking also used real Docker `--memory`/`--cpus` limits rather than
+  guessing, specifically because this is the one part of the system whose
+  correctness depends on real resource constraints, not just logic.
+
 ## Major trade-offs
 
 - **Curated registries vs pure retrieval-time reasoning.** Policy/contract
@@ -146,3 +227,11 @@ prompt hope. Signing keeps this stateless across serverless instances.
   labeled as suggestions) instead of LLM classification per load: instant,
   free, explainable; the chat agent does the careful policy-based
   classification when it matters.
+- **Narrow, honest fallback vs a "smarter" one.** The no-API-key path could
+  have tried harder to replicate full tool-calling with a bigger local model;
+  instead it deliberately does less (single-tool routing, capped facts, a
+  hard reply deadline) so that what it does do is still access-controlled,
+  still cites real tool output, and never hangs or fabricates. On a genuinely
+  free CPU tier, slow-and-correct beat fast-and-confident-but-occasionally-
+  wrong as the failure mode to optimize for, consistent with this project's
+  whole stance on trust.

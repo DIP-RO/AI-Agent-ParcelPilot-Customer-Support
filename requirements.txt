@@ -1,3 +1,9 @@
 fastapi>=0.115
 anthropic>=0.69
 tzdata>=2025.1
+
+# Local SLM fallback (app/slm.py), used automatically when ANTHROPIC_API_KEY is
+# unset. The extra index below serves prebuilt CPU-only wheels so installing
+# this doesn't require a slow/flaky from-source compile on a free-tier build.
+--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+llama-cpp-python==0.3.34

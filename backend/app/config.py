@@ -22,6 +22,31 @@ MAX_TOKENS = int(os.environ.get("PARCELPILOT_MAX_TOKENS", "8192"))
 # Hard cap on model turns per user message (each turn may contain several tool calls).
 MAX_AGENT_TURNS = int(os.environ.get("PARCELPILOT_MAX_AGENT_TURNS", "12"))
 
+# ---------------------------------------------------------------------------
+# Local fallback (SLM): used automatically when no Anthropic key is configured
+# (e.g. a free-tier deploy with no budget for API calls), so the app is never
+# fully down. See app/slm.py and app/fallback_agent.py.
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+HAS_ANTHROPIC_KEY = bool(ANTHROPIC_API_KEY)
+
+# GGUF model path baked into the image (see Dockerfile / scripts/fetch_slm_model.py).
+# Small on purpose: this must fit comfortably next to the app on a 512MB-RAM free tier.
+SLM_MODEL_PATH = Path(os.environ.get("PARCELPILOT_SLM_MODEL_PATH", DATA_DIR / "models" / "slm.gguf"))
+SLM_CONTEXT_TOKENS = int(os.environ.get("PARCELPILOT_SLM_CTX", "1024"))
+SLM_MAX_NEW_TOKENS = int(os.environ.get("PARCELPILOT_SLM_MAX_TOKENS", "64"))
+SLM_THREADS = int(os.environ.get("PARCELPILOT_SLM_THREADS", "2"))
+# Hard wall-clock ceiling on a single generation call (prefill + decode), via
+# llama.cpp's stopping_criteria hook -- not a killed thread, so a host too
+# slow to finish degrades to a clean partial (or, worst case, template)
+# answer, never a hang. Measured on a Render-free-equivalent 0.1 vCPU
+# container: prefill and decode both run at only ~0.5-0.6 tokens/sec, so even
+# a short prompt's prefill can take the better part of a minute -- this is
+# deliberately generous (paired with the fallback_agent SSE keepalive, which
+# was verified to hold the connection open past two minutes) rather than
+# tight, because a too-tight deadline would make the SLM path fire the
+# instant template every time and never actually get to speak.
+SLM_TIMEOUT_SECONDS = float(os.environ.get("PARCELPILOT_SLM_TIMEOUT_S", "90"))
+
 # Secret for signing session tokens and pending-action payloads. Mocked auth:
 # a real deployment would use a proper identity provider, but signatures keep
 # the demo honest (tokens and pending actions cannot be forged client-side).
@@ -33,3 +58,9 @@ SESSION_SECRET = os.environ.get("PARCELPILOT_SESSION_SECRET", "parcelpilot-demo-
 BUSINESS_DAY_START_HOUR = 9
 BUSINESS_DAY_END_HOUR = 18
 BUSINESS_HOURS_PER_DAY = BUSINESS_DAY_END_HOUR - BUSINESS_DAY_START_HOUR
+
+# Marker prefix for server-generated "trusted" notes injected into the chat
+# (e.g. action-execution confirmations). Shared by app/agent.py and
+# app/fallback_agent.py so both refuse to treat user text starting with this
+# prefix as a trusted platform message.
+SYSTEM_NOTE_PREFIX = "[SYSTEM NOTE"

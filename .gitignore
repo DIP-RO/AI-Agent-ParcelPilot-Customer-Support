@@ -7,3 +7,4 @@ frontend/dist/
 .env
 .vercel
 .DS_Store
+data/models/

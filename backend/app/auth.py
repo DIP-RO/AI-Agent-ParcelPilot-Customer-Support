@@ -93,3 +93,21 @@ def _find_persona(persona_id: str) -> dict:
         if persona["persona_id"] == persona_id:
             return persona
     raise AuthError(f"Unknown persona {persona_id!r}")
+
+
+def trusted_note(note_token: str | None, principal: Principal) -> str | None:
+    """Return the text of a note ONLY if it is a server-signed exec note for
+    this principal. Client-supplied free text can never reach this channel,
+    so neither the Claude agent nor the local SLM fallback can be tricked into
+    asserting a fake action execution. Shared by app/agent.py and
+    app/fallback_agent.py so the two "brains" enforce the exact same check.
+    """
+    if not note_token:
+        return None
+    try:
+        data = verify_blob(note_token)
+    except AuthError:
+        return None
+    if data.get("t") != "exec_note" or data.get("persona_id") != principal.persona_id:
+        return None
+    return data.get("text")

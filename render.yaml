@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: parcelpilot-copilot
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      # Optional: leave unset to run the app on the local SLM fallback
+      # (app/slm.py) instead of Claude -- useful for a zero-cost demo.
+      # Set it in the Render dashboard to enable the full Claude-backed agent.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: PARCELPILOT_MODEL
+        value: claude-sonnet-5
+      # Generated per-deploy rather than using the repo's checked-in demo
+      # default, since this signs session tokens and pending actions.
+      - key: PARCELPILOT_SESSION_SECRET
+        generateValue: true

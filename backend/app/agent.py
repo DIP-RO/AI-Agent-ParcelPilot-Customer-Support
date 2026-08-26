@@ -17,11 +17,11 @@ from collections.abc import AsyncIterator
 
 import anthropic
 
-from . import auth, config, datastore, tools
+from . import auth, config, datastore, fallback_agent, tools
 from .auth import Principal
 from .timeutil import fmt_ts
 
-SYSTEM_NOTE_PREFIX = "[SYSTEM NOTE"
+SYSTEM_NOTE_PREFIX = config.SYSTEM_NOTE_PREFIX
 
 
 def _core_prompt() -> str:
@@ -101,18 +101,10 @@ def _serialize_blocks(content) -> list[dict]:
 
 
 def _trusted_note(note_token: str | None, principal: Principal) -> str | None:
-    """Return the text of a note ONLY if it is a server-signed exec note for
-    this principal. Client-supplied free text can never reach the trusted
-    channel, so the model can't be tricked into asserting a fake execution."""
-    if not note_token:
-        return None
-    try:
-        data = auth.verify_blob(note_token)
-    except auth.AuthError:
-        return None
-    if data.get("t") != "exec_note" or data.get("persona_id") != principal.persona_id:
-        return None
-    return data.get("text")
+    """Thin alias over auth.trusted_note (kept so existing call sites/tests in
+    this module are unaffected). See auth.trusted_note for the real logic,
+    which is shared with the SLM fallback agent."""
+    return auth.trusted_note(note_token, principal)
 
 
 async def run_agent_stream(
@@ -121,7 +113,17 @@ async def run_agent_stream(
     user_message: str | None,
     note_token: str | None,
 ) -> AsyncIterator[str]:
-    """Run one user turn through the agentic loop, yielding SSE frames."""
+    """Run one user turn through the agentic loop, yielding SSE frames.
+
+    Falls back to the local SLM agent (fallback_agent.py) when no Anthropic API
+    key is configured, so a free-tier deploy (or a live key outage) degrades to
+    a narrower local assistant instead of the chat simply erroring out.
+    """
+    if not config.HAS_ANTHROPIC_KEY:
+        async for frame in fallback_agent.run_fallback_stream(principal, history, user_message, note_token):
+            yield frame
+        return
+
     tool_specs = tools.tool_specs_for(principal)
     system = [
         {
