@@ -80,10 +80,16 @@ The repo is also Vercel-ready: static frontend + Python serverless function ([ap
 
 ```bash
 npm i -g vercel
-vercel               # from the repo root
-vercel env add ANTHROPIC_API_KEY
+vercel               # from the repo root (links/creates the project)
+# Optional: set ANTHROPIC_API_KEY for the Claude-backed path
+#   vercel env add ANTHROPIC_API_KEY production --sensitive
+# Required: set a non-default session secret
+#   vercel env add PARCELPILOT_SESSION_SECRET production --sensitive
 vercel --prod
 ```
+
+**Live demo (local SLM fallback, no API key configured):**
+https://parcelpilot-copilot.vercel.app — `/api/health` reports `mode: local_slm_fallback`, `slm_loaded: true`. First request on a cold instance may take ~60-90s while the 145 MB GGUF model downloads into `/tmp` and loads; warm invocations are faster.
 
 Note: the mocked action log / ticket-update overlay is in-memory per serverless instance (documented trade-off — actions are mocks; a real deployment would use a database).
 
