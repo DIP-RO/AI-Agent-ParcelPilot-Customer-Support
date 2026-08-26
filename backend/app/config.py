@@ -29,9 +29,19 @@ MAX_AGENT_TURNS = int(os.environ.get("PARCELPILOT_MAX_AGENT_TURNS", "12"))
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
 HAS_ANTHROPIC_KEY = bool(ANTHROPIC_API_KEY)
 
-# GGUF model path baked into the image (see Dockerfile / scripts/fetch_slm_model.py).
-# Small on purpose: this must fit comfortably next to the app on a 512MB-RAM free tier.
-SLM_MODEL_PATH = Path(os.environ.get("PARCELPILOT_SLM_MODEL_PATH", DATA_DIR / "models" / "slm.gguf"))
+# GGUF model path. On Docker/Render it's baked into the image at build time
+# (scripts/fetch_slm_model.py) and this just points at that file. On Vercel
+# the deployment bundle is read-only, so app/slm.py lazily downloads the same
+# file into /tmp (writable, and persists across warm invocations of the same
+# instance) on first use instead -- detected via Vercel's own VERCEL env var.
+# Small on purpose either way: this must fit comfortably in a 512MB-RAM
+# free-tier container alongside the rest of the app.
+_slm_default_dir = Path("/tmp") if os.environ.get("VERCEL") else (DATA_DIR / "models")
+SLM_MODEL_PATH = Path(os.environ.get("PARCELPILOT_SLM_MODEL_PATH", _slm_default_dir / "slm.gguf"))
+SLM_MODEL_URL = os.environ.get(
+    "PARCELPILOT_SLM_MODEL_URL",
+    "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q8_0.gguf",
+)
 SLM_CONTEXT_TOKENS = int(os.environ.get("PARCELPILOT_SLM_CTX", "1024"))
 SLM_MAX_NEW_TOKENS = int(os.environ.get("PARCELPILOT_SLM_MAX_TOKENS", "64"))
 SLM_THREADS = int(os.environ.get("PARCELPILOT_SLM_THREADS", "2"))

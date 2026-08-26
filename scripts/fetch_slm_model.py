@@ -38,9 +38,9 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 from app import config  # noqa: E402
 
-REPO = "bartowski/SmolLM2-135M-Instruct-GGUF"
-FILENAME = "SmolLM2-135M-Instruct-Q8_0.gguf"
-URL = f"https://huggingface.co/{REPO}/resolve/main/{FILENAME}"
+# Single source of truth for the model URL/path is app/config.py -- app/slm.py
+# downloads the same file lazily at runtime (e.g. into Vercel's /tmp) if it's
+# ever missing, so both paths always agree on exactly what model is running.
 
 
 def main() -> None:
@@ -50,7 +50,7 @@ def main() -> None:
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(".part")
-    print(f"Downloading {FILENAME} from {REPO} ...")
+    print(f"Downloading {config.SLM_MODEL_URL} ...")
 
     def _progress(count: int, block_size: int, total_size: int) -> None:
         done = count * block_size
@@ -58,7 +58,7 @@ def main() -> None:
         print(f"\r  {done / 1e6:.0f}MB / {total_size / 1e6:.0f}MB ({pct}%)", end="", flush=True)
 
     try:
-        urllib.request.urlretrieve(URL, tmp, reporthook=_progress)
+        urllib.request.urlretrieve(config.SLM_MODEL_URL, tmp, reporthook=_progress)
     except Exception:
         tmp.unlink(missing_ok=True)
         raise

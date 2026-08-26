@@ -13,9 +13,11 @@ Design (see docs/ARCHITECTURE.md "Local fallback mode" for the full writeup):
   built around matter more than a flashier degraded mode. Tool selection is
   done by plain Python in app/fallback_agent.py.
 - Lazy singleton: the GGUF model loads once (on first use) and stays resident
-  for the process lifetime. This assumes a persistent host (Render, Docker),
-  not serverless -- reloading a model per request would be far too slow on a
-  free-tier CPU.
+  for the life of the process/instance. On a persistent host (Render, Docker)
+  the file is baked into the image at build time. On Vercel's read-only
+  serverless bundle, `_ensure_model_file` downloads it into /tmp on first use
+  instead -- a cold instance pays that cost once, then reuses it for every
+  warm invocation, same lazy-singleton pattern either way.
 - Bounded latency, not bounded quality: measured on a Render-free-equivalent
   0.1 vCPU container, this model generates at roughly 0.5-0.6 tokens/sec --
   slow enough that an unbounded generation is a real availability risk (a
@@ -24,10 +26,10 @@ Design (see docs/ARCHITECTURE.md "Local fallback mode" for the full writeup):
   `stopping_criteria` hook, so a slow host gets a shorter (or, worst case,
   template) answer within a bounded time instead of an open-ended hang.
 - Fails closed to a deterministic template, never to a crash: if
-  llama-cpp-python isn't installed, the model file is missing, generation
-  raises, or the model is busy past its wait budget, `phrase_answer`
-  degrades to listing the facts as plain bullet points. The fallback must
-  never become a new way to break the app.
+  llama-cpp-python isn't installed, the model file is missing/can't be
+  downloaded, generation raises, or the model is busy past its wait budget,
+  `phrase_answer` degrades to listing the facts as plain bullet points. The
+  fallback must never become a new way to break the app.
 """
 
 from __future__ import annotations
@@ -35,6 +37,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
+import urllib.request
 
 from . import config
 
@@ -44,6 +47,30 @@ _load_lock = threading.Lock()
 _generate_lock = threading.Lock()  # llama.cpp contexts aren't safe for concurrent calls
 _model = None
 _load_attempted = False
+
+
+def _ensure_model_file() -> bool:
+    """Make sure the GGUF file exists at config.SLM_MODEL_PATH, downloading it
+    on first use if not (e.g. Vercel's read-only bundle: cached into /tmp,
+    which persists across warm invocations of the same instance). On
+    Docker/Render the file is already baked in at build time, so this is a
+    no-op there. Returns False (never raises) if neither is possible, so the
+    caller degrades to the template path instead of failing."""
+    if config.SLM_MODEL_PATH.exists():
+        return True
+    try:
+        config.SLM_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp = config.SLM_MODEL_PATH.with_suffix(".part")
+        logger.info("Downloading local SLM model to %s ...", config.SLM_MODEL_PATH)
+        urllib.request.urlretrieve(config.SLM_MODEL_URL, tmp)
+        tmp.rename(config.SLM_MODEL_PATH)
+        return True
+    except Exception:
+        logger.exception(
+            "Could not fetch the SLM model (%s); SLM fallback will use plain templates.",
+            config.SLM_MODEL_URL,
+        )
+        return False
 
 SYSTEM_INSTRUCTION = (
     "You are ParcelPilot support. Use ONLY the FACTS below, add nothing. "
@@ -76,12 +103,7 @@ def _load() -> "object | None":
         except ImportError:
             logger.warning("llama-cpp-python is not installed; SLM fallback will use plain templates.")
             return None
-        if not config.SLM_MODEL_PATH.exists():
-            logger.warning(
-                "No SLM model file at %s; SLM fallback will use plain templates. "
-                "See scripts/fetch_slm_model.py.",
-                config.SLM_MODEL_PATH,
-            )
+        if not _ensure_model_file():
             return None
         try:
             _model = Llama(
